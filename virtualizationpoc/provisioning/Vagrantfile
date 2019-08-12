@@ -1,0 +1,22 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+user_home = ENV["HOME"]
+
+Vagrant.configure("2") do |config|
+  # Use centos/7 to create a new VM from a minimal CentOS install.  The
+  # provisioning script will add everything needed.  You can also start
+  # with a pre-provisioned box image, in which case 'vagrant up' will
+  # be much faster.  Refer to the readme.md file in this directory for
+  # details.
+  config.vm.box = "centos/7"
+  # config.vm.box = "drq-centos75"
+
+  config.vm.synced_folder ".", "/provisioning"
+  config.vm.synced_folder "..", "/home/vagrant/virtualizationpoc"
+  config.vm.synced_folder "#{user_home}/.gradle", "/home/vagrant/.gradle"
+
+  config.vm.provision "shell", inline: <<-SHELL
+    /usr/bin/tr -d '\r' < /provisioning/scripts/vagrant.sh | /bin/bash -x
+  SHELL
+end

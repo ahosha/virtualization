@@ -1,0 +1,9 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="virtualizationpoc_main:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/virtualizationpoc_main_jar</output-path>
+    <root id="archive" name="virtualizationpoc_main.jar">
+      <element id="module-output" name="virtualizationpoc_main" />
+      <element id="extracted-dir" path="$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.codehaus.groovy/groovy-all/2.3.11/f6b34997d04c1538ce451d3955298f46fdb4dbd4/groovy-all-2.3.11.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>

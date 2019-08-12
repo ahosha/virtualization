@@ -1,0 +1,141 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.bmuschko:gradle-vagrant-plugin:2.1'
+    }
+}
+
+plugins {
+    id 'groovy'
+    id 'java'
+}
+
+apply plugin: 'com.bmuschko.vagrant'
+
+group 'org.ibm.virtualization.test'
+version '1.0'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile 'org.codehaus.groovy:groovy-all:2.3.11'
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+}
+
+ext {
+    version = "1.0"
+    description = "Anchor Rsync Functional Verification Test"
+    provisioningDir = new File("${getRootDir()}/provisioning/")
+    vagrantEnv = new File("${provisioningDir}/vagrant.env")
+    vsphereEnv = new File("${provisioningDir}/vsphere_ip_box1.env")
+    vsphereEnv_ip = new File("${provisioningDir}/vsphere_ip_box2.env")
+
+    //vagrantProjectDir = "/home/vagrant/go/src/${goProjectPackagePath}"
+    now = {
+        new Date().format("yyyyMMddHHmmss")
+    }
+}
+
+vagrant {
+    boxDir provisioningDir
+
+    installation {
+        validate false
+    }
+}
+
+
+vagrantUp {
+    description = "Runs the vagrant"
+
+    doLast {
+        // ensure vagrant.env is set to the default value
+        if (!vagrantEnv.exists()) {
+            vagrantEnv.createNewFile()
+        }
+        vagrantEnv.setText("localhost")
+
+
+    }
+
+}
+
+vagrantDestroy {
+    onlyIf {
+        if (project.hasProperty("vagrantKeep")) {
+            // run if -PvagrantKeep=false
+            project.getProperty("vagrantKeep") == "false"
+        } else {
+            // skip by default
+            false
+        }
+    }
+
+    doLast {
+        vagrantEnv.delete()
+    }
+}
+
+task vsphereUp(type: Exec) {
+//    outputs.upToDateWhen {
+//        vsphereEnv.exists()
+//    }
+//    dependsOn ':downloadArticfactForTestRunner'
+
+    doLast {
+        // ensure env files do not conflict
+        if (vagrantEnv.exists()) {
+            vagrantEnv.renameTo(new File("${provisioningDir}/vsphere-${now()}.env.old"))
+        }
+    }
+
+    workingDir getRootDir()
+    commandLine "/bin/bash", "${provisioningDir}/scripts/vsphere.sh"
+
+}
+
+task vsphereDestroy() {
+    onlyIf {
+        if (project.hasProperty("vsphereKeep")) {
+            // skip if -PvsphereKeep=true
+            project.getProperty("vsphereKeep") != "true"
+        } else {
+            // run by default
+            true
+        }
+    }
+
+
+    doLast {
+        exec {
+            def terraformDir = System.getenv("TERRAFORM_DIR")
+            if (terraformDir != null) {
+                workingDir terraformDir
+            } else {
+                workingDir provisioningDir
+            }
+
+            standardInput new StringBufferInputStream("yes")
+            commandLine "terraform", "destroy", provisioningDir
+        }
+
+        vsphereEnv.delete()
+        vsphereEnv_ip.delete()
+
+
+    }
+}
+
+task vsphereTest(type: Test) {
+    description = "Runs test on a Vsphere virtual machine"
+    dependsOn ':fvtDependencies'
+    dependsOn vsphereUp
+    finalizedBy vsphereDestroy
+
+}
